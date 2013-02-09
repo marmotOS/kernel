@@ -7,3 +7,8 @@ source is in /src
 
 Assembly code is written NASM format and should be assembled with NASM.
 
+
+assemble/boot like so:
+nasm -f bin -o os.bin bootloader.asm
+dd status=noxfer conv=notrunc if=os.bin of=os.flp
+qemu-system-i386 -fda os.flp
