@@ -1,0 +1,9 @@
+MarmotOS ReadMe
+
+Please read the LICENSE file for license information. 
+
+Documentation is in /doc
+source is in /src
+
+Assembly code is written NASM format and should be assembled with NASM.
+
