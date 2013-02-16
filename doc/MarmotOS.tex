@@ -2,6 +2,7 @@
 \usepackage{fancyhdr}
 \usepackage{textcomp}
 \usepackage{lastpage}
+\usepackage{listings}
 
 \pagestyle{fancy}
 \fancyhead{}
@@ -29,7 +30,9 @@ MarmotOS is a hobby OS, written by Bryant Moscon. It is designed to operate only
 
 \section{The Bootloader}
 
-Add some comments about bootloader design, functionality, etc
+When the computer powers up, the BIOS initally has control, and executes some predetermined routines (like POSTing). Eventually it will check for the presence of a bootsector. If one is found, it will load it into a well known address in memory and transfer control to that location. The BIOS checks for a sector that ends with a double word matching 0xAA55. If one is not found, the BIOS will complain with some sort of error message on screen.
+
+If the sector does have the requisite signature, these 512 bytes are loaded to 07C0:0000.\footnote{Of course, since the CPU starts in real mode this address can also be though of as 0000:7C00. Real mode addresses are calculated as segment * 16 + offset} Once control has been transfered to the bootloader, we need to set up the data segment correctly and then we can begin to access our routines and do some actual work. Since we are in real mode, we still have access to all the BIOS provided interrrupt routines, so we print a message indicating that the bootloader has successfully be loaded. 
 
 
 
