@@ -1,10 +1,36 @@
 \documentclass[a4paper,12pt]{article}
+\usepackage{fancyhdr}
+\usepackage{textcomp}
+\usepackage{lastpage}
+
+\pagestyle{fancy}
+\fancyhead{}
+\fancyfoot{}
+\lfoot{Copyright \textcopyright ~2013 by Bryant Moscon}
+\rfoot{Page \thepage ~of \pageref{LastPage}}
 
 \begin{document}
 \title{MarmotOS - ver 0.0.1}
 \author{Bryant Moscon}
 \date{February 2013}
 \maketitle
+\thispagestyle{fancy}
+\noindent\hrulefill
+\vspace{-5mm} %to remove some whitespace before "Contents"
+\tableofcontents
+\noindent\hrulefill
+
+\clearpage
+
+\section{Introduction}
+
+MarmotOS is a hobby OS, written by Bryant Moscon. It is designed to operate only on 64bit x86 architectures. 
+
+
+\section{The Bootloader}
+
+Add some comments about bootloader design, functionality, etc
+
 
 
 \end{document}
