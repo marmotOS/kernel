@@ -42,7 +42,7 @@ BITS 16
 
 start:
 	cli
-	mov ax, 0x07C0		; set DS to the correct data segment (bios loads us to 0:07C0)
+	mov ax, 0x07C0		; set DS to the correct data segment (bios loads us to 07C0:0000)
 	mov ds, ax
 	
 	mov si, loading_string	; load string address into SI
