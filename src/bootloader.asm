@@ -37,18 +37,70 @@
 ; THE SOFTWARE
 	
 BITS 16
-
-  loading_string db 'Loading MarmotOS...', 0
-
+	
 start:
 	cli
 	mov ax, 0x07C0		; set DS to the correct data segment (bios loads us to 07C0:0000)
 	mov ds, ax
+	mov ss, ax
+	mov sp, start
 	
 	mov si, loading_string	; load string address into SI
-	call print		
+	call print
+	call x64_check           
+	jc .not_supported
+	mov si, yes_64_mode
+	call print
 
 	jmp $			; todo: add code here
+
+.not_supported:
+	mov si, no_64_mode
+	call print
+	hlt
+	jmp $	
+
+	;; Steps to determine if 64bit mode is supported:
+	;; 1. check if CPUID is a supported instruction. This is done
+	;;    by checking if we can set/clear bit 21 in EFLAGS
+	;; 2. if we have CPUID, we have to check if extension 0x80000001 is supported.
+	;;    this can be done by calling with extension 0x80000000.
+	;; 3. if we have the extension, we can call CPUID with that extension and check
+	;;    bit 29 in EDX
+x64_check:
+	pushfd 			; push EFLAGS onto stack
+	
+	pop eax                 ; pop them into EAX
+	or eax, 0x200000        ; set bit 21
+	push eax                ; push eax and then pop it into EFLAGS
+	popfd                   
+	pushfd                 	; push the flags and then pop them into eax
+	pop eax
+	and eax, 0x200000       ; check and see if bit 21 is set
+	shr eax, 21 
+	and eax, 1              
+	
+	test eax, eax           ; is eax is 1 CPUID is supported
+	jz .error
+ 
+	mov eax, 0x80000000   	; check if CPUID extensions are supported
+	cpuid                   ; (everything from P4 on supports them)
+ 
+	cmp eax, 0x80000001     ; make sure value we get back is at least 0x80000001
+	jb .error               
+ 
+	mov eax, 0x80000001	; if we support it, check bit 29 in EDX
+	cpuid
+        shr edx, 29
+	and edx, 1
+	test edx, edx
+	jz .error
+ 
+	ret
+ 
+.error:
+	stc
+	ret	
 
 print:				; Print routine (EH mode of int10. char goes into AL)
 	mov ah, 0Eh		
@@ -63,6 +115,9 @@ print:				; Print routine (EH mode of int10. char goes into AL)
 .done:
 	ret
 
+loading_string db "Loading MarmotOS...", 0x0A, 0x0D, 0
+no_64_mode db "Error: CPU does not support 64 bit mode", 0x0A, 0x0D, 0
+yes_64_mode db "64 bit support detected", 0x0A, 0x0D, 0
 	
 	; place the 0xAA55 signature at end of 512 byte boot sector.
 TIMES 	510-($-$$) DB 0 	; Unfortunately, NASM != MASM 
