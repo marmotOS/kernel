@@ -53,6 +53,14 @@ start:
 	call print
 
 	jmp $			; todo: add code here
+	;; Need to:
+	;; * load 64bit kernel to well known address
+	;; * setup page table
+	;; * setup IDT (interrupt descriptor table)
+	;; * Setup Global Descriptor Table (GDT)
+	;; * enable long mode
+	;; * jump to 64bit kernel at well known address
+	
 
 .not_supported:
 	mov si, no_64_mode
