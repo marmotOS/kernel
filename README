@@ -8,15 +8,6 @@ source is in /src
 Assembly code is written NASM format and should be assembled with NASM.
 
 
-assemble/boot like so:
-nasm -f bin -o os.bin bootloader.asm
+Make all will compile into a floppy image, boot.flp. This can be loaded with QEMU:
 
-
-Create a disk image:
-dd status=noxfer conv=notrunc if=os.bin of=os.flp
-
-
-Boot with QEMU:
-qemu-system-i386 -fda os.flp   - This should fail since OS only supports 64bit
-
-qemu-system-x86_64 -fda os.flp - This works 
+qemu-system-x86_64 -fda boot.flp

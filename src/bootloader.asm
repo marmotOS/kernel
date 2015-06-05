@@ -1,4 +1,4 @@
-; Copyright (C) 2013  Bryant Moscon - bmoscon@gmail.com
+; Copyright (C) 2013-2015  Bryant Moscon - bmoscon@gmail.com
 ; 
 ; Permission is hereby granted, free of charge, to any person obtaining a copy
 ; of this software and associated documentation files (the "Software"), to 
@@ -37,30 +37,25 @@
 ; THE SOFTWARE
 	
 BITS 16
-	
+ORG 0x0
+
+jmp start	
 start:
 	cli
 	mov ax, 0x07C0		; set DS to the correct data segment (bios loads us to 07C0:0000)
 	mov ds, ax
 	mov ss, ax
 	mov sp, start
-	
+        sti
+        mov [drive_number], dl  ; save off drive number since 64bit check will clobber it	
 	mov si, loading_string	; load string address into SI
 	call print
-	call x64_check           
+	call x64_check         ; check if CPU supports 64bit
 	jc .not_supported
 	mov si, yes_64_mode
 	call print
+        call stage2    ; load 2nd state of bootloader into memory from disk
 
-	jmp $			; todo: add code here
-	;; Need to:
-	;; * load 64bit kernel to well known address
-	;; * setup page table
-	;; * setup IDT (interrupt descriptor table)
-	;; * Setup Global Descriptor Table (GDT)
-	;; * enable long mode
-	;; * jump to 64bit kernel at well known address
-	
 
 .not_supported:
 	mov si, no_64_mode
@@ -88,7 +83,7 @@ x64_check:
 	shr eax, 21 
 	and eax, 1              
 	
-	test eax, eax           ; is eax is 1 CPUID is supported
+	test eax, eax           ; if eax is 1, then CPUID is supported
 	jz .error
  
 	mov eax, 0x80000000   	; check if CPUID extensions are supported
@@ -110,23 +105,64 @@ x64_check:
 	stc
 	ret	
 
-print:				; Print routine (EH mode of int10. char goes into AL)
-	mov ah, 0Eh		
+print:				; Print routine (0x0E mode of int10. char goes into AL)
+	mov ah, 0x0E		
 
 .repeat:
 	lodsb			; Get char from DS:SI and stick in AL
 	or  al, al              ; is char a zero (i..e end of string)?
 	jz .done		; if AL is zero, we're done
-	int 10h			
+	int 0x10		
 	jmp .repeat             ; loop til string is printed
 
 .done:
 	ret
 
-loading_string db "Loading MarmotOS...", 0x0A, 0x0D, 0
-no_64_mode db "Error: CPU does not support 64 bit mode", 0x0A, 0x0D, 0
-yes_64_mode db "64 bit support detected", 0x0A, 0x0D, 0
+stage2:
+	;; since the sector thats been loaded by the bios is only 512 bytes, 
+	;; we need to load a 2nd stage bootloader into memory from disk, and jump 
+	;; to the new stage, which will be responsible for the bulk of the setup and 
+	;; initialization before loading the kernel
+	;;
+	;; 1. reset floppy controller
+        ;; 2. read sectors into memory from the disk
+        ;; 3. jump to 2nd stage
+
+        xor ax,ax
+	mov dl, [drive_number]
+	int 0x13                  ; AH = 0, reset drive
+        jc .bad_boot 
+        mov ah, 0x2               ; AH = 2, read sectors from drive number in DL
+	mov al, 0x2               ; AL = num sectors to read
+	xor ch,ch                 ; CH = cylinder
+	mov cl, 0x2               ; CL = sector note that sectors start at 1, there is no 0th sector
+	xor dh,dh                 ; DH = head
+	mov bx, 0x100             ; ES:BX points to the location we are writing to
+	mov es, bx                ; in this case, its 0x100:0 (or 0x1000 in a flat address space)
+	xor bx, bx                
+	int 0x13
+	jc .bad_boot
+	jmp 0x100:0x0 	          ; jump to 2nd stage
+
+.bad_boot:
+	mov si, bad_boot
+	call print
+	hlt
+	jmp $
+
+
+	
+loading_string     db "Loading MarmotOS...", 0x0A, 0x0D, 0
+no_64_mode         db "Error: CPU does not support 64 bit mode", 0x0A, 0x0D, 0
+yes_64_mode        db "64 bit support detected", 0x0A, 0x0D, 0
+bad_boot           db "Error: unable to boot from disk", 0x0A, 0x0D, 0
+drive_number       db 0x0 ; DL is set to the current drive at power on
+
+; 1.44 MB double sided floppies have 2 heads, 80 tracks per head, 
+; 18 sectors per track, and 512 bytes per sector. 
+sectors_per_head   db 0x12
+
 	
 	; place the 0xAA55 signature at end of 512 byte boot sector.
-TIMES 	510-($-$$) DB 0 	; Unfortunately, NASM != MASM 
-	DW 0xAA55		; so we cannot ORG 510 this...
+TIMES 	510-($-$$) DB 0	
+                   DW 0xAA55		
