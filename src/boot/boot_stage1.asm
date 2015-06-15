@@ -39,7 +39,34 @@
 BITS 16
 ORG 0x0
 
-jmp start	
+
+;; BIOS Parameter Block (BPB)
+dw 0x3CEB       ; a short jmp to end of BPB (remember Intel is little endian) 
+db 0x90         ; no op
+db "        "   ; 8 byte OEM ID - not used per FAT spec
+dw 0x200        ; bytes per sector
+db 0x01         ; sectors per cluster
+dw 0x01         ; number of reserver sectors
+db 0x02         ; number of file allocation tables on media
+dw 0xE0         ; number of directory entries
+; 1.44 MB double sided floppies have 2 heads, 80 tracks per head, 
+; 18 sectors per track, and 512 bytes per sector.
+dw 0xB40        ; number of sectors (if zero, value is stored in last double world)
+db 0xF0         ; media descriptor type - 0xF0 for Floppy, 0xF8 for hard disk
+dw 0x9          ; sectors per allocation table
+dw 0x12         ; sectors per track
+dw 0x2          ; number of heads or sides
+dd 0x0          ; number of hidden sectors (i.e. LBA)
+dd 0x0          ; large number of sectors (if number of sectors word is set to 0)
+
+;; Extended Boot Record
+db 0x0           ; drive number, not used, get from DL
+db 0x0           ; reserved
+db 0x29          ; extended signature
+dd 0x0           ; volume ID
+db "           " ; volume label string
+db "        "    ; system ID, FAT spec says to ignore  
+	
 start:
 	cli
 	mov ax, 0x07C0		; set DS to the correct data segment (bios loads us to 07C0:0000)
@@ -105,19 +132,6 @@ x64_check:
 	stc
 	ret	
 
-print:				; Print routine (0x0E mode of int10. char goes into AL)
-	mov ah, 0x0E		
-
-.repeat:
-	lodsb			; Get char from DS:SI and stick in AL
-	or  al, al              ; is char a zero (i..e end of string)?
-	jz .done		; if AL is zero, we're done
-	int 0x10		
-	jmp .repeat             ; loop til string is printed
-
-.done:
-	ret
-
 stage2:
 	;; since the sector thats been loaded by the bios is only 512 bytes, 
 	;; we need to load a 2nd stage bootloader into memory from disk, and jump 
@@ -151,18 +165,14 @@ stage2:
 	jmp $
 
 
+%include 'common.asm'
 	
 loading_string     db "Loading MarmotOS...", 0x0A, 0x0D, 0
 no_64_mode         db "Error: CPU does not support 64 bit mode", 0x0A, 0x0D, 0
 yes_64_mode        db "64 bit support detected", 0x0A, 0x0D, 0
 bad_boot           db "Error: unable to boot from disk", 0x0A, 0x0D, 0
 drive_number       db 0x0 ; DL is set to the current drive at power on
-
-; 1.44 MB double sided floppies have 2 heads, 80 tracks per head, 
-; 18 sectors per track, and 512 bytes per sector. 
-sectors_per_head   db 0x12
-
 	
-	; place the 0xAA55 signature at end of 512 byte boot sector.
+;; place the 0xAA55 signature at end of 512 byte boot sector.
 TIMES 	510-($-$$) DB 0	
                    DW 0xAA55		

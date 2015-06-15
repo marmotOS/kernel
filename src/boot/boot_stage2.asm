@@ -56,18 +56,7 @@ start:
         ;; * enable long mode
         ;; * jump to 64bit kernel at well known address
         
-print:
-	mov ah, 0x0E		
-.repeat:
-	lodsb			; Get char from DS:SI and stick in AL
-	or  al, al              ; is char a zero (i..e end of string)?
-	jz .done		; if AL is zero, we're done
-	int 0x10		
-	jmp .repeat             ; loop til string is printed
-.done:
-	ret
-	
-
+%include 'common.asm'	
 
 stage_2 db "Stage 2 loaded", 0x0A, 0x0D, 0
 
