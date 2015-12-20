@@ -1,4 +1,4 @@
-MarmotOS ReadMe
+# MarmotOS Kernel
 
 Please read the LICENSE file for license information. 
 
