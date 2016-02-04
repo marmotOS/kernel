@@ -1,5 +1,8 @@
 # MarmotOS Kernel
 
+[![License](https://img.shields.io/badge/license-XFree86-blue.svg)](LICENSE)
+![Architecture](https://img.shields.io/badge/arch-x86--64-blue.svg)
+
 Please read the LICENSE file for license information. 
 
 Documentation is in /doc
